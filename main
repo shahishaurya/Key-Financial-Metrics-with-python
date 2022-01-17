@@ -1,0 +1,66 @@
+import requests 
+import pandas as pd
+import matplotlib.pyplot as plt
+demo= 'api key'
+companies = requests.get(f'https://fmpcloud.io/api/v3/stock-screener?sector=technology&marketCapMoreThan=100000000000&limit=100&apikey={demo}')
+companies = companies.json()
+technological_companies = []
+for item in companies:
+    technological_companies.append(item['symbol'])
+print(technological_companies)
+metrics= {}
+for item in technological_companies:
+    try:
+        balancesheet = requests.get(f'https://fmpcloud.io/api/v3/balance-sheet-statement/{item}?&apikey={demo}').json()
+        incomestatemnt = requests.get(f'https://fmpcloud.io/api/v3/income-statement/{item}?&apikey={demo}').json()
+        marketcap = requests.get(f'https://fmpcloud.io/api/v3/market-capitalization/{item}?apikey={demo}').json()
+        marketcap = marketcap[0]['marketCap']
+        companydata = requests.get(f'https://fmpcloud.io/api/v3/profile/{item}?apikey={demo}').json()
+        latest_Annual_Dividend = companydata[0]['lastDiv']
+        price = companydata[0]['price']
+        balancesheet[0]
+        current_ratio = balancesheet[0]['totalCurrentAssets'] / balancesheet[0]['totalCurrentLiabilities']
+        debt_to_assets = balancesheet[0]['totalDebt'] / balancesheet[0]['totalAssets']
+        debt_to_equity = balancesheet[0]['totalDebt'] / balancesheet[0]['totalStockholdersEquity']
+        dividend_yield = latest_Annual_Dividend / price
+        interest_coverage = incomestatemnt[0]['operatingIncome'] / incomestatemnt[0]['interestExpense']
+        gross_profit_margin = (incomestatemnt[0]['revenue'] - incomestatemnt[0]['costOfRevenue'])/incomestatemnt[0]['revenue']
+        ROE = (incomestatemnt[0]['netIncome'] / ((balancesheet[0]['totalStockholdersEquity']+ balancesheet[1]['totalStockholdersEquity'])/2))
+        price_to_sales = marketcap / (incomestatemnt[0]['revenue'])
+        price_to_earnings = marketcap / (incomestatemnt[0]['netIncome']) 
+        price_to_book = marketcap / balancesheet[0]['totalStockholdersEquity']
+        ROA = (incomestatemnt[0]['netIncome']/balancesheet[0]['totalAssets'])
+        metrics[item] = {}
+        metrics[item]['ROA'] = ROA
+        metrics[item]['ROE'] = ROE
+        metrics[item]['Current Ratio'] = current_ratio
+        metrics[item]['Debt to Assets'] = debt_to_assets
+        metrics[item]['Debt to Equity'] = debt_to_equity
+        metrics[item]['Dividend Yield'] = (dividend_yield*100)
+        metrics[item]['Interest Coverage'] = interest_coverage
+        metrics[item]['Gross Profit Margin'] = gross_profit_margin
+        metrics[item]['Price to Sales'] = price_to_sales
+        metrics[item]['Price to Earnings'] = price_to_earnings
+        metrics[item]['Price to Book'] = price_to_book
+    except:
+        pass
+print(metrics)
+metrics_df = pd.DataFrame.from_dict(metrics, orient='index')
+metrics_df = metrics_df.T
+metrics_df['mean'] = metrics_df.mean(axis=1)
+plt.figure(figsize=(20,10))
+x1 = metrics_df.columns
+y1 = metrics_df.iloc[8,]
+plt.plot(x1, y1, label = "Price to Sales")
+x2 = metrics_df.columns
+y2 = metrics_df.iloc[9,] 
+plt.plot(x2, y2, label = "Price to Earnings")
+x3 = metrics_df.columns
+y3 = metrics_df.iloc[10,] 
+plt.plot(x3, y3, label = "Price to Book")
+plt.xlabel('companies')
+plt.ylabel('')
+plt.title('Plotting Key financial ratios')
+plt.legend()
+plt.tight_layout()
+plt.show()
